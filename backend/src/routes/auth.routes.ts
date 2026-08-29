@@ -4,6 +4,7 @@ import {
   googleAuthCallback,
   getCurrentUser,
   logoutUser,
+  manualLogin,
 } from '../controllers/auth.controller.js';
 import { authMiddleware } from '../auth/middleware.js';
 
@@ -11,6 +12,7 @@ const router = Router();
 
 router.get('/google', googleLoginRedirect);
 router.get('/google/callback', googleAuthCallback);
+router.post('/login', manualLogin);
 router.get('/me', authMiddleware, getCurrentUser);
 router.post('/logout', authMiddleware, logoutUser);
 

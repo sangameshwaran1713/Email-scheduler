@@ -33,27 +33,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // ONLY check for token in URL (from OAuth callback)
+    console.log('🔍 AuthContext useEffect started');
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
+    console.log('URL token:', urlToken ? '✅ Found' : '❌ Not found');
 
     if (urlToken) {
-      // Found token in URL from OAuth callback
       console.log('✅ Token found in URL from OAuth callback');
       handleLogin(urlToken);
-      // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-      // NO token in URL
-      // Check localStorage for existing session
       const storedToken = localStorage.getItem('token');
+      console.log('LocalStorage token:', storedToken ? '✅ Found' : '❌ Not found');
       
       if (storedToken) {
-        // User was previously logged in
         console.log('✅ Token found in localStorage (previous session)');
         setToken(storedToken);
         apiService.setAuthToken(storedToken);
-        // Decode token to get user info
         try {
           const payload = JSON.parse(atob(storedToken.split('.')[1]));
           setUser({
@@ -66,7 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('token');
         }
       } else {
-        // No token anywhere - user is NOT logged in
         console.log('❌ No token found - user not authenticated');
       }
       

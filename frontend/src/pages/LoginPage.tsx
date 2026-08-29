@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { loginWithEmail } from '../services/api';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -10,7 +11,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Manual login (optional - just for UI)
+  // Manual login
   const handleManualLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -22,9 +23,9 @@ export function LoginPage() {
     setIsLoading(true);
     
     try {
-      // For now, manual login is UI-only
-      // Real implementation would call backend API
-      addToast('Use Google login instead', 'info');
+      const { token } = await loginWithEmail(email, password);
+      login(token);
+      addToast('Successfully logged in!', 'info');
     } catch (error) {
       addToast('Login failed', 'error');
     } finally {

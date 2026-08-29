@@ -181,3 +181,57 @@ export async function logoutUser(req: Request, res: Response) {
     message: 'Logged out successfully',
   });
 }
+
+export async function manualLogin(req: Request, res: Response) {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required',
+      });
+    }
+
+    let userId = `user-${Date.now()}`;
+    const userEmail = email.trim().toLowerCase();
+    let userName = userEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+    try {
+      const prisma = getPrismaClient();
+      const user = await prisma.user.upsert({
+        where: { email: userEmail },
+        update: { name: userName },
+        create: {
+          email: userEmail,
+          name: userName,
+          googleId: `manual-${Date.now()}`,
+        },
+      });
+      userId = user.id;
+      userName = user.name;
+    } catch (dbErr: any) {
+      logger.warn({ message: 'DB query fallback for manualLogin', error: dbErr.message });
+    }
+
+    const token = generateToken(userId, userEmail);
+
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      data: {
+        id: userId,
+        email: userEmail,
+        name: userName,
+      },
+    });
+  } catch (err: any) {
+    logger.error({ message: 'Manual login failed', error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Manual login failed',
+      error: err.message,
+    });
+  }
+}

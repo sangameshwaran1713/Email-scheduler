@@ -8,6 +8,12 @@ function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
 
   console.log('🔍 AppContent render - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
+  console.log('📊 AppContent render:', {
+    isAuthenticated,
+    isLoading,
+    shouldShowDashboard: !isLoading && isAuthenticated,
+    shouldShowLogin: !isLoading && !isAuthenticated,
+  });
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -20,7 +26,7 @@ function AppContent() {
   }
 
   // If authenticated, show dashboard
-  console.log('📊 Rendering Dashboard');
+  console.log('📊 Rendering DashboardPage');
   return <DashboardPage />;
 }
 
