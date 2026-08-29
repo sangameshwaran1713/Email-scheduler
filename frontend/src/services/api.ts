@@ -59,7 +59,7 @@ export async function loginWithEmail(email: string, password: string): Promise<{
 }
 
 export async function fetchCurrentUser(): Promise<User | null> {
-  const token = localStorage.getItem('reachinbox_token');
+  const token = localStorage.getItem('token') || localStorage.getItem('reachinbox_token');
   if (!token) {
     return null;
   }
@@ -69,16 +69,26 @@ export async function fetchCurrentUser(): Promise<User | null> {
       return res.data.data;
     }
   } catch (err) {
-    // Dev fallback profile only when token exists
+    // Fallback to token payload if API server is offline
   }
-  return {
-    id: 'user-demo-1',
-    email: 'oliver.brown@domain.io',
-    name: 'Oliver Brown',
-    avatar: null,
-    googleId: 'google-demo-1',
-    createdAt: new Date().toISOString(),
-  };
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload && payload.email) {
+      const emailUsername = payload.email.split('@')[0];
+      const formattedName = payload.name || emailUsername.replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      return {
+        id: payload.userId || payload.id || 'user-1',
+        email: payload.email,
+        name: formattedName,
+        avatar: null,
+        googleId: `google-${payload.email}`,
+        createdAt: new Date().toISOString(),
+      };
+    }
+  } catch {}
+
+  return null;
 }
 
 export async function scheduleCampaign(payload: ScheduleCampaignPayload) {

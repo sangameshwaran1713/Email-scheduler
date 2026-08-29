@@ -21,7 +21,7 @@ export function Sidebar({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const userName = user?.name || 'User Profile';
-  const userEmail = user?.email || 'user@domain.io';
+  const userEmail = user?.email || '';
   const userAvatar = user?.avatar || null;
 
   return (

@@ -8,7 +8,7 @@ import { logger } from '../config/logger.js';
 export async function googleLoginRedirect(req: Request, res: Response) {
   if (!config.GOOGLE_CLIENT_ID || config.GOOGLE_CLIENT_ID.startsWith('your_google_client_id')) {
     logger.info({ message: 'Google OAuth credentials not configured in .env, initiating dev login redirect' });
-    const devToken = generateToken('google-dev-user-id', 'oliver.brown@domain.io');
+    const devToken = generateToken('google-dev-user-id', 'user@gmail.com');
     return res.redirect(`${config.FRONTEND_URL}/dashboard?token=${encodeURIComponent(devToken)}`);
   }
 

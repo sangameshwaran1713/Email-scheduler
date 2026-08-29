@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Paperclip,
@@ -24,6 +24,7 @@ import {
 import { scheduleCampaign } from '../services/api';
 import { CsvUploader } from './CsvUploader';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 interface ComposeModalProps {
   onClose: () => void;
@@ -32,9 +33,18 @@ interface ComposeModalProps {
 
 export function ComposeModal({ onClose, onSuccess }: ComposeModalProps) {
   const { showToast } = useToast();
-  const [fromEmail, setFromEmail] = useState('oliver.brown@domain.io');
+  const { user } = useAuth();
+  
+  const [fromEmail, setFromEmail] = useState(user?.email || '');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+
+  // Sync fromEmail if user object updates
+  useEffect(() => {
+    if (user?.email && !fromEmail) {
+      setFromEmail(user.email);
+    }
+  }, [user, fromEmail]);
 
   // Default start time (tomorrow 10:00 AM)
   const defaultTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -44,13 +54,9 @@ export function ComposeModal({ onClose, onSuccess }: ComposeModalProps) {
   const [delayBetweenEmails, setDelayBetweenEmails] = useState<number>(0);
   const [hourlyLimit, setHourlyLimit] = useState<number>(0);
 
-  // Recipient list management
+  // Recipient list management (start empty with NO demo emails)
   const [recipientInput, setRecipientInput] = useState('');
-  const [recipientChips, setRecipientChips] = useState<string[]>([
-    'tame@jmail.com',
-    'lame@jmail.com',
-    'dame@jmail.com',
-  ]);
+  const [recipientChips, setRecipientChips] = useState<string[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSendLaterPopover, setShowSendLaterPopover] = useState(false);
@@ -91,17 +97,25 @@ export function ComposeModal({ onClose, onSuccess }: ComposeModalProps) {
 
     let finalRecipients = [...recipientChips];
     if (recipientInput.trim() && recipientInput.includes('@')) {
-      finalRecipients.push(recipientInput.trim());
+      const val = recipientInput.trim().toLowerCase();
+      if (!finalRecipients.includes(val)) {
+        finalRecipients.push(val);
+      }
     }
 
     if (finalRecipients.length === 0) {
-      finalRecipients = ['recipient@example.com'];
+      showToast('error', 'Validation Error', 'Please enter at least one recipient email address.');
+      return;
     }
+
+    setIsSubmitting(true);
+
+    const currentUserEmail = fromEmail || user?.email || 'user@example.com';
 
     const newCreatedEmails: any[] = finalRecipients.map((rec, i) => ({
       id: `email-${Date.now()}-${i}`,
-      userId: 'user-demo-1',
-      senderId: 'sender-1',
+      userId: user?.id || `user-${Date.now()}`,
+      senderId: currentUserEmail,
       recipient: rec,
       subject,
       body,
@@ -144,6 +158,8 @@ export function ComposeModal({ onClose, onSuccess }: ComposeModalProps) {
       setIsSubmitting(false);
     }
   };
+
+  const activeFromEmail = fromEmail || user?.email || '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs animate-fadeIn">
@@ -269,12 +285,15 @@ export function ComposeModal({ onClose, onSuccess }: ComposeModalProps) {
           <div className="flex items-center border-b border-gray-100 pb-3">
             <span className="w-20 text-xs font-semibold text-gray-500">From</span>
             <select
-              value={fromEmail}
+              value={activeFromEmail}
               onChange={(e) => setFromEmail(e.target.value)}
               className="bg-transparent text-xs font-bold text-gray-800 focus:outline-none cursor-pointer"
             >
-              <option value="oliver.brown@domain.io">oliver.brown@domain.io</option>
-              <option value="support@domain.io">support@domain.io</option>
+              {activeFromEmail ? (
+                <option value={activeFromEmail}>{activeFromEmail}</option>
+              ) : (
+                <option value="">No sender email</option>
+              )}
             </select>
           </div>
 
@@ -282,36 +301,31 @@ export function ComposeModal({ onClose, onSuccess }: ComposeModalProps) {
           <div className="flex items-center border-b border-gray-100 pb-3 flex-wrap gap-2">
             <span className="w-20 text-xs font-semibold text-gray-500">To</span>
             <div className="flex-1 flex items-center flex-wrap gap-1.5 min-w-[250px]">
-              {recipientChips.slice(0, 3).map((chip) => (
+              {recipientChips.map((chip) => (
                 <span
                   key={chip}
                   className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-200"
                 >
                   {chip}
-                  <button onClick={() => removeChip(chip)} className="hover:text-red-500">
+                  <button onClick={() => removeChip(chip)} className="hover:text-red-500 cursor-pointer">
                     <X className="w-3 h-3" />
                   </button>
                 </span>
               ))}
-              {recipientChips.length > 3 && (
-                <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-semibold">
-                  +{recipientChips.length - 3}
-                </span>
-              )}
               <input
                 type="text"
                 value={recipientInput}
                 onChange={(e) => setRecipientInput(e.target.value)}
                 onKeyDown={handleKeyDownRecipient}
                 placeholder="recipient@example.com"
-                className="flex-1 min-w-[150px] text-xs text-gray-800 focus:outline-none placeholder-gray-400 py-1"
+                className="flex-1 min-w-[180px] text-xs text-gray-800 focus:outline-none placeholder-gray-400 py-1"
               />
             </div>
 
             <button
               type="button"
               onClick={() => setShowCsvUploader(!showCsvUploader)}
-              className="text-xs text-green-700 font-semibold hover:text-green-800 flex items-center gap-1 px-2.5 py-1 rounded-md bg-green-50 hover:bg-green-100 border border-green-200/60 transition"
+              className="text-xs text-green-700 font-semibold hover:text-green-800 flex items-center gap-1 px-2.5 py-1 rounded-md bg-green-50 hover:bg-green-100 border border-green-200/60 transition cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Upload List</span>
@@ -387,24 +401,10 @@ export function ComposeModal({ onClose, onSuccess }: ComposeModalProps) {
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Type Your Reply..."
+              placeholder="Type your email content here..."
               rows={8}
               className="w-full p-4 text-xs text-gray-800 placeholder-gray-400 focus:outline-none resize-none min-h-[180px]"
             ></textarea>
-          </div>
-
-          {/* Attachment Preview Card */}
-          <div className="pt-2 flex items-center gap-3">
-            <div className="w-24 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 relative group">
-              <img
-                src="/tennis_coach_profile.jpg"
-                alt="Tennis attachment preview"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-            </div>
           </div>
         </div>
       </div>
