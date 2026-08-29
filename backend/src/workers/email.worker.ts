@@ -45,7 +45,9 @@ export async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
     // Deterministic staggered rescheduling to prevent top-of-hour thundering herd loops
     const deferKey = `sender:deferredCount:${senderId}:${hourWindow}`;
     const deferIndex = await redis.incr(deferKey);
-    await redis.expire(deferKey, 7200);
+    // Expire at the start of the next hour window so the counter resets each hour
+    const secondsUntilNextHour = Math.ceil((getNextHourWindowStart().getTime() - Date.now()) / 1000) + 60;
+    await redis.expire(deferKey, secondsUntilNextHour);
 
     const minDelayMs = config.MIN_EMAIL_DELAY_MS || 2000;
     const staggeredOffsetMs = (deferIndex - 1) * minDelayMs;

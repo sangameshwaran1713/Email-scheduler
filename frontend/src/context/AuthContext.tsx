@@ -10,59 +10,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const handleLogin = (newToken: string) => {
-    console.log('🔐 Logging in with token:', newToken.slice(0, 20) + '...');
-    
+    // Validate JWT structure before accepting
+    const parts = newToken.split('.');
+    if (parts.length !== 3) {
+      return;
+    }
+
     setToken(newToken);
     apiService.setAuthToken(newToken);
     localStorage.setItem('token', newToken);
     
-    // Decode JWT to get user info
+    // Decode JWT to get user info (server validates signature on each API call)
     try {
-      const payload = JSON.parse(atob(newToken.split('.')[1]));
-      console.log('👤 User:', payload);
+      const payload = JSON.parse(atob(parts[1]));
+      // Reject obviously expired tokens
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem('token');
+        setIsLoading(false);
+        return;
+      }
       setUser({
         id: payload.userId || payload.id || 'user-1',
         email: payload.email || 'user@example.com',
         name: payload.name || (payload.email ? payload.email.split('@')[0] : 'User'),
       });
-    } catch (e) {
-      console.error('Failed to decode token:', e);
+    } catch {
+      // Token payload decode failed — don't store it
+      localStorage.removeItem('token');
+      apiService.clearAuthToken();
     }
     
     setIsLoading(false);
   };
 
   useEffect(() => {
-    console.log('🔍 AuthContext useEffect started');
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
-    console.log('URL token:', urlToken ? '✅ Found' : '❌ Not found');
 
     if (urlToken) {
-      console.log('✅ Token found in URL from OAuth callback');
       handleLogin(urlToken);
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
       const storedToken = localStorage.getItem('token');
-      console.log('LocalStorage token:', storedToken ? '✅ Found' : '❌ Not found');
       
       if (storedToken) {
-        console.log('✅ Token found in localStorage (previous session)');
-        setToken(storedToken);
-        apiService.setAuthToken(storedToken);
-        try {
-          const payload = JSON.parse(atob(storedToken.split('.')[1]));
-          setUser({
-            id: payload.userId || payload.id || 'user-1',
-            email: payload.email || 'user@example.com',
-            name: payload.name || (payload.email ? payload.email.split('@')[0] : 'User'),
-          });
-        } catch (e) {
-          console.error('Failed to decode stored token');
+        const parts = storedToken.split('.');
+        if (parts.length === 3) {
+          try {
+            const payload = JSON.parse(atob(parts[1]));
+            if (payload.exp && payload.exp * 1000 < Date.now()) {
+              // Token expired — clear it
+              localStorage.removeItem('token');
+              apiService.clearAuthToken();
+            } else {
+              setToken(storedToken);
+              apiService.setAuthToken(storedToken);
+              setUser({
+                id: payload.userId || payload.id || 'user-1',
+                email: payload.email || 'user@example.com',
+                name: payload.name || (payload.email ? payload.email.split('@')[0] : 'User'),
+              });
+            }
+          } catch {
+            localStorage.removeItem('token');
+          }
+        } else {
           localStorage.removeItem('token');
         }
-      } else {
-        console.log('❌ No token found - user not authenticated');
       }
       
       setIsLoading(false);
@@ -70,7 +84,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleLogout = () => {
-    console.log('🚪 Logging out');
     setUser(null);
     setToken(null);
     apiService.clearAuthToken();

@@ -35,7 +35,7 @@ export async function getSmtpTransporter(): Promise<nodemailer.Transporter> {
     logger.info({
       message: 'Created Ethereal test account',
       user: testAccount.user,
-      pass: testAccount.pass,
+      // Password intentionally omitted from logs
     });
   }
 
@@ -49,6 +49,15 @@ export interface SendEmailOptions {
   body: string;
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export async function sendEmail({ from, to, subject, body }: SendEmailOptions) {
   const mailTransporter = await getSmtpTransporter();
 
@@ -58,8 +67,8 @@ export async function sendEmail({ from, to, subject, body }: SendEmailOptions) {
     subject,
     text: body,
     html: `<div style="font-family: sans-serif; padding: 20px;">
-      <h2>${subject}</h2>
-      <p style="white-space: pre-wrap;">${body}</p>
+      <h2>${escapeHtml(subject)}</h2>
+      <p style="white-space: pre-wrap;">${escapeHtml(body)}</p>
     </div>`,
   });
 

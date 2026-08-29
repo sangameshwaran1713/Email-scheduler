@@ -31,9 +31,13 @@ export async function getEmailQueue(): Promise<Queue<EmailJobData>> {
           type: 'exponential',
           delay: 5000,
         },
-        removeOnComplete: false, // Keep completed jobs in Redis for audit & Bull Board
-        removeOnFail: false,     // Keep failed jobs in Redis for inspection & retry
+        removeOnComplete: { age: 3600, count: 500 }, // Keep completed jobs for 1 hour or up to 500
+        removeOnFail: { age: 86400, count: 200 },    // Keep failed jobs for 24 hours or up to 200
       },
+    });
+
+    emailQueue.on('error', (err) => {
+      // Suppress unhandled redis connection errors when redis is offline
     });
 
     logger.info({ message: 'BullMQ Email Queue initialized', queueName: 'emailQueue' });

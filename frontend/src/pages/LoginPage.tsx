@@ -26,8 +26,9 @@ export function LoginPage() {
       const { token } = await loginWithEmail(email, password);
       login(token);
       addToast('Successfully logged in!', 'info');
-    } catch (error) {
-      addToast('Login failed', 'error');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Login failed. Please try again.';
+      addToast(message, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -35,11 +36,8 @@ export function LoginPage() {
 
   // Google OAuth login
   const handleGoogleLogin = () => {
-    console.log('🔵 Redirecting to Google OAuth...');
     // Redirect to backend OAuth endpoint
     window.location.href = '/api/auth/google';
-    // Note: This is a FULL PAGE redirect, not React navigation
-    // Backend handles OAuth and redirects back with token
   };
 
   return (

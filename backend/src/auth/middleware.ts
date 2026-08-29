@@ -42,7 +42,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     return res.status(401).json({
       success: false,
       message: 'Unauthorized',
-      error: 'Invalid or expired session token. Please log in again.',
+      error: 'Session token is invalid or has expired. Please log in again.',
     });
   }
 

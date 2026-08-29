@@ -17,7 +17,11 @@ export function generateToken(userId: string, email: string): string {
 export function verifyToken(token: string): JwtPayload | null {
   try {
     return jwt.verify(token, config.JWT_SECRET) as JwtPayload;
-  } catch {
+  } catch (err: any) {
+    // Distinguish expired from invalid for easier debugging
+    if (err?.name === 'TokenExpiredError') {
+      return null; // Expired — caller returns 401 with generic message
+    }
     return null;
   }
 }
