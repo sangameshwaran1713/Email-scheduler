@@ -1,0 +1,20 @@
+{
+  "name": "reachinbox-email-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm --workspace=backend install && npm --workspace=frontend install",
+    "build:all": "npm --workspace=backend run build && npm --workspace=frontend run build",
+    "typecheck:all": "npm --workspace=backend run typecheck && npm --workspace=frontend run typecheck",
+    "dev:api": "npm --workspace=backend run dev:api",
+    "dev:worker": "npm --workspace=backend run dev:worker",
+    "dev:frontend": "npm --workspace=frontend run dev",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  }
+}
